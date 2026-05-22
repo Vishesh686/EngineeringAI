@@ -1,83 +1,98 @@
-# Google AdSense on Engineering AI (step by step)
+# Google AdSense — Engineering AI (approved setup)
 
-Your app already has a sidebar ad slot (`AdSlot` in `AppSidebar`). Follow these steps to turn it into real revenue without annoying users.
+Code is wired. You only need your **Publisher ID** and **ad slot IDs** from AdSense, then Netlify env vars + redeploy.
 
-## Part 1 — Get approved (1–4 weeks)
+---
 
-1. **Finish the live site**
-   - Deploy on Netlify: `https://engineerai.netlify.app`
-   - Add real pages: home, login, privacy policy, terms (AdSense requires these).
+## What I need from you (reply with these 3 values)
 
-2. **Create a Privacy Policy page** (required)
-   - Add a route `/privacy` with text explaining cookies, ads, and data.
-   - Link it in the site footer.
+From [AdSense](https://adsense.google.com/) → **Ads** → **By ad unit**:
 
-3. **Sign up for AdSense**
-   - Go to [google.com/adsense](https://www.google.com/adsense/)
-   - Use the same Google account you want for payouts.
-   - Site URL: `https://engineerai.netlify.app`
-   - Country, payment details, tax info.
+| # | What | Example | Your value |
+|---|------|---------|------------|
+| 1 | **Publisher ID** | `ca-pub-1234567890123456` | ? |
+| 2 | **Sidebar ad slot** (display, responsive) | `1234567890` | ? |
+| 3 | **Reward modal ad slot** (display or rectangle, ~300×250) | `9876543210` | ? |
 
-4. **Add the AdSense verification code**
-   - AdSense gives you a script or meta tag.
-   - Add to Netlify env (optional) or paste in `src/routes/__root.tsx` inside `<head>` while verifying.
+Create **two** display ad units if you only have one today:
 
-5. **Wait for approval**
-   - Google reviews content, traffic, and policy compliance.
-   - Status: AdSense dashboard → **Sites**.
+1. Name: `Sidebar` → use for sidebar  
+2. Name: `Reward credits modal` → use in the “Free credits” popup  
 
-## Part 2 — Create ad units (after approval)
+---
 
-1. AdSense → **Ads** → **By ad unit** → **Display ads**.
-2. Create a unit named e.g. `Sidebar responsive`.
-3. Copy:
-   - **Publisher ID** → `ca-pub-XXXXXXXX`
-   - **Ad slot ID** → numeric id for the unit
+## Step 1 — Netlify environment variables
 
-## Part 3 — Connect to Netlify
+**Site configuration → Environment variables → Add:**
 
-In **Site configuration → Environment variables**:
+| Variable | Value |
+|----------|--------|
+| `VITE_ADSENSE_CLIENT` | Your `ca-pub-...` (same for all units) |
+| `VITE_ADSENSE_SLOT_SIDEBAR` | Sidebar slot number |
+| `VITE_ADSENSE_SLOT_REWARD` | Reward modal slot number |
+| `VITE_REWARDED_AD_CREDITS` | `100` (credits per watch) |
+| `VITE_REWARDED_AD_WATCH_SECONDS` | `30` (seconds before Claim unlocks) |
+| `REWARDED_AD_CREDITS` | `100` (server — must match) |
+| `REWARDED_AD_MAX_DAILY` | `5` (optional, claims per day) |
+| `REWARDED_AD_COOLDOWN_SECONDS` | `60` (optional, wait between claims) |
 
-| Variable | Example |
-|----------|---------|
-| `VITE_ADSENSE_CLIENT` | `ca-pub-1234567890` |
-| `VITE_ADSENSE_SLOT_SIDEBAR` | `1234567890` |
+Then **Deploys → Trigger deploy → Clear cache and deploy site**.
 
-Redeploy with **Clear cache and deploy**.
+---
 
-## Part 4 — Load the AdSense script
+## Step 2 — AdSense site settings
 
-In `src/routes/__root.tsx`, inside `RootShell` `<head>` after approval:
+1. **Sites** → `engineerai.netlify.app` → status **Ready**
+2. **Privacy & messaging** (EU): configure consent if you have EU traffic (AdSense CMP or similar)
+3. **Ads** → avoid **Auto ads** everywhere if you only want sidebar + reward modal (less annoying)
 
-```html
-<script
-  async
-  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXX"
-  crossorigin="anonymous"
-></script>
-```
+---
 
-Replace `ca-pub-XXXX` with your publisher id.
+## Step 3 — Legal pages (already in app)
 
-## Placement strategy (earn without annoying)
+- https://engineerai.netlify.app/privacy  
+- https://engineerai.netlify.app/terms  
 
-| Placement | Why |
-|-----------|-----|
-| Sidebar only (already built) | Users expect nav area ads; chat stays clean |
-| Avoid popups / full-screen | Hurts retention and violates good UX |
-| Max 1–2 units per page | AdSense policy + better RPM on focused pages |
+Linked in the footer. Add your contact email in `src/routes/privacy.tsx` if you want.
 
-Do **not** put ads inside the chat message stream.
+---
 
-## Part 5 — Monitor
+## Step 4 — Verify after deploy
 
-- AdSense → **Reports** → RPM, CTR, revenue
-- If fill rate is low, try **Auto ads** in AdSense settings (optional)
+1. Open site in **incognito** (logged in).
+2. **Sidebar** (expanded): ad or Google placeholder should appear (not dashed “configure Netlify”).
+3. Chat → **Free +100 credits** → centered popup with ad + 30s timer → **Claim** adds credits.
+
+---
+
+## How rewarded credits work
+
+- User opens modal → ad loads → **30s timer** (configurable).
+- **Claim** is disabled until timer finishes (we cannot detect true video end on standard AdSense display units).
+- User taps **Claim** → server adds **100 credits** (configurable).
+- Modal closes. Daily limit / cooldown via `REWARDED_AD_*` server env.
+
+**Policy:** Users are not asked to click ads — only to keep the modal open for the timer.
+
+---
+
+## Step 5 — Monitor revenue
+
+AdSense → **Reports** → by site, ad unit, RPM.
+
+---
 
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
-| Blank ad box | Approval pending or env vars missing |
-| "Ad serving disabled" | Policy violation — read AdSense email |
-| No revenue | Need real traffic; avoid clicking your own ads |
+| Dashed “configure Netlify” box | Env vars missing or deploy without cache clear |
+| Blank ad area | New units can take **30–60 min** to fill; check AdSense “Ready” |
+| Claim gives 5 not 100 | Set `REWARDED_AD_CREDITS=100` on Netlify (server) and redeploy |
+| adsbygoogle.js blocked | Ad blocker off for testing |
+
+---
+
+## Optional: custom domain
+
+If you add `www.yourdomain.com`, add it in AdSense **Sites** and update Supabase redirect URLs.

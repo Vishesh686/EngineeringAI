@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { notifyChatsChanged } from "@/lib/chat-events";
 import { motion } from "framer-motion";
-import { Send, Sparkles, MessageSquarePlus, Paperclip, Mic, Search, BookOpenCheck } from "lucide-react";
+import { Send, Sparkles, MessageSquarePlus, Paperclip, Mic, Search, BookOpenCheck, PlayCircle } from "lucide-react";
+import { RewardedAdModal } from "@/components/RewardedAdModal";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -60,6 +61,8 @@ function ChatPage() {
   const [subject, setSubject] = useState<string>("General");
   const [balance, setBalance] = useState(0);
   const [claimingReward, setClaimingReward] = useState(false);
+  const [rewardModalOpen, setRewardModalOpen] = useState(false);
+  const rewardCredits = Number(import.meta.env.VITE_REWARDED_AD_CREDITS ?? 100);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoSentRef = useRef(false);
 
@@ -246,12 +249,11 @@ function ChatPage() {
     }
   };
 
-  const watchAndClaimCredits = async () => {
+  const claimRewardCredits = async () => {
     if (claimingReward) return;
     setClaimingReward(true);
     try {
-      await new Promise((r) => setTimeout(r, 2200));
-      const rewardToken = `reward_${Date.now()}`;
+      const rewardToken = `reward_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const { data: sess } = await supabase.auth.getSession();
       const resp = await fetch("/api/credits/reward", {
         method: "POST",
@@ -267,9 +269,10 @@ function ChatPage() {
       }
       const json = await resp.json();
       setBalance(json.newBalance ?? balance);
-      toast.success(`+${json.earned ?? 0} credits added`);
+      toast.success(`+${json.earned ?? rewardCredits} credits added`);
     } catch (e: any) {
       toast.error(e.message ?? "Could not claim credits");
+      throw e;
     } finally {
       setClaimingReward(false);
     }
@@ -317,14 +320,20 @@ function ChatPage() {
             Credits: {balance} ({CREDITS_PER_MESSAGE}/message)
           </span>
           <Button
-            variant="secondary"
             size="sm"
-            onClick={watchAndClaimCredits}
+            onClick={() => setRewardModalOpen(true)}
             disabled={claimingReward}
-            className="bg-gradient-to-r from-emerald-500/90 to-cyan-500/90 text-white hover:opacity-90"
+            className="gap-1.5 border border-emerald-500/40 bg-gradient-to-r from-emerald-600 to-cyan-600 font-medium text-white shadow-md hover:from-emerald-500 hover:to-cyan-500"
           >
-            {claimingReward ? "Watching..." : "Watch Video + Credits"}
+            <PlayCircle className="h-4 w-4" />
+            Free +{rewardCredits} credits
           </Button>
+          <RewardedAdModal
+            open={rewardModalOpen}
+            onOpenChange={setRewardModalOpen}
+            claiming={claimingReward}
+            onClaim={claimRewardCredits}
+          />
           <Button variant="ghost" size="sm" className="hidden md:inline-flex">
             <Search className="mr-2 h-4 w-4" /> Search chats
           </Button>

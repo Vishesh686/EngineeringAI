@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getSupabaseAdmin, getUserFromBearer } from "@/lib/server/supabase-admin";
 
-const REWARD_CREDITS = Number(process.env.REWARDED_AD_CREDITS ?? 5);
+const REWARD_CREDITS = Number(process.env.REWARDED_AD_CREDITS ?? 100);
 const MAX_DAILY_REWARDS = Number(process.env.REWARDED_AD_MAX_DAILY ?? 10);
 const MIN_SECONDS_BETWEEN_REWARDS = Number(process.env.REWARDED_AD_COOLDOWN_SECONDS ?? 45);
 
