@@ -24,7 +24,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = "/app";
+      if (data.session) window.location.href = "/app/chat";
     });
   }, []);
 
@@ -35,14 +35,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin + "/app" },
+          options: { emailRedirectTo: window.location.origin + "/app/chat" },
         });
         if (error) throw error;
         toast.success("Check your email to verify your account.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        window.location.href = "/app";
+        window.location.href = "/app/chat";
       }
     } catch (err: any) {
       toast.error(err.message ?? "Something went wrong");
@@ -54,14 +54,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const google = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/app` },
+      options: { redirectTo: `${window.location.origin}/app/chat` },
     });
     if (error) toast.error(error.message ?? "Google sign-in failed");
   };
   const github = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: `${window.location.origin}/app` },
+      options: { redirectTo: `${window.location.origin}/app/chat` },
     });
     if (error) toast.error(error.message ?? "GitHub sign-in failed");
   };
