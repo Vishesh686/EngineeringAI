@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist/client"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA-style client routes are handled by TanStack Start server functions on Netlify.
+# The plugin wires SSR and /api/* routes automatically.

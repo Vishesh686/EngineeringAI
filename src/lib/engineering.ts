@@ -1,0 +1,71 @@
+export const ENGINEERING_BRANCHES = [
+  "Mechanical Engineering",
+  "Aerospace Engineering",
+  "Computer Science and Engineering (General)",
+  "CSE (AI & ML)",
+  "CSE (Data Science)",
+  "CSE (Bioinformatics)",
+  "CSE (Information Security)",
+  "CSE (Internet of Things)",
+  "CSE & Business Systems",
+  "Electronics and Communication Engineering",
+  "Information Technology",
+  "Electrical and Electronics Engineering",
+  "Biotechnology",
+  "Civil Engineering",
+  "Chemical Engineering",
+  "Electronics and Instrumentation Engineering",
+  "Electrical and Computer Engineering",
+  "Manufacturing Engineering",
+  "Electronics and Computer Engineering",
+  "VLSI Design and Technology",
+  "Health Sciences and Technology",
+] as const;
+
+export const SUBJECTS_BY_BRANCH: Record<string, string[]> = {
+  "Mechanical Engineering": [
+    "Thermodynamics",
+    "Fluid Mechanics",
+    "Manufacturing",
+    "CAD/CAM",
+    "Strength of Materials",
+    "Dynamics",
+    "Kinematics",
+    "Heat Transfer",
+    "CFD",
+    "FEA",
+    "Machine Design",
+    "Robotics",
+  ],
+  "Aerospace Engineering": [
+    "Aerodynamics",
+    "Propulsion",
+    "Flight Mechanics",
+    "Aircraft Structures",
+    "CFD",
+    "FEA",
+    "Gas Dynamics",
+    "Control Systems",
+    "Avionics",
+    "Space Mechanics",
+  ],
+  default: [
+    "General",
+    "Mathematics",
+    "Physics",
+    "Programming",
+    "Signals",
+    "Materials",
+    "Data Structures",
+    "Operating Systems",
+    "DBMS",
+    "AI/ML",
+    "Web Development",
+    "Cybersecurity",
+  ],
+};
+
+export function getBranchSubjects(branch: string | null | undefined) {
+  if (!branch) return SUBJECTS_BY_BRANCH.default;
+  return SUBJECTS_BY_BRANCH[branch] ?? SUBJECTS_BY_BRANCH.default;
+}
