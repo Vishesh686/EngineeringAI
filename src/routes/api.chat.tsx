@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { chatCompletionRequest } from "@/lib/ai-provider";
 import { getSupabaseAdmin, getUserFromBearer } from "@/lib/server/supabase-admin";
+
+const CREDITS_PER_CHAT = 10;
 
 const SYSTEM_PROMPTS: Record<string, string> = {
   general: "You are Engineering AI, an expert mechanical engineering copilot. Be precise, use SI units by default, format equations in LaTeX ($..$ for inline, $$..$$ for block), use markdown for structure.",
@@ -58,7 +61,7 @@ export const Route = createFileRoute("/api/chat")({
           ? `${base}\n\n${context}\n\nUse this trusted branch/subject knowledge if relevant:\n${knowledgeContext}\n\nIf the provided knowledge conflicts with generic info, prioritize the provided knowledge and mention assumptions.`
           : `${base}\n\n${context}`;
 
-        const creditCharge = await supabase.rpc("consume_ai_credit", { cost: 1 });
+        const creditCharge = await supabase.rpc("consume_ai_credit", { cost: CREDITS_PER_CHAT });
         if (creditCharge.error) {
           if (creditCharge.error.message.includes("insufficient_credits")) {
             return new Response("Insufficient credits", { status: 402 });
@@ -66,20 +69,12 @@ export const Route = createFileRoute("/api/chat")({
           return new Response(creditCharge.error.message, { status: 500 });
         }
 
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), { status: 500 });
-
-        const model = "google/gemini-3-flash-preview";
         const mathMode = isMathContext(mode, subject);
 
         if (mathMode) {
-          const draftResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model,
-              stream: false,
-              messages: [
+          const draftResp = await chatCompletionRequest({
+            stream: false,
+            messages: [
                 {
                   role: "system",
                   content:
@@ -87,7 +82,6 @@ export const Route = createFileRoute("/api/chat")({
                 },
                 ...messages,
               ],
-            }),
           });
           if (!draftResp.ok) {
             const text = await draftResp.text();
@@ -97,13 +91,9 @@ export const Route = createFileRoute("/api/chat")({
           const draft = draftJson?.choices?.[0]?.message?.content ?? "";
           const userProblem = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
-          const verifyResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model,
-              stream: false,
-              messages: [
+          const verifyResp = await chatCompletionRequest({
+            stream: false,
+            messages: [
                 {
                   role: "system",
                   content:
@@ -114,7 +104,6 @@ export const Route = createFileRoute("/api/chat")({
                   content: `Problem:\n${userProblem}\n\nDraft answer:\n${draft}`,
                 },
               ],
-            }),
           });
           if (!verifyResp.ok) {
             const text = await verifyResp.text();
@@ -128,14 +117,9 @@ export const Route = createFileRoute("/api/chat")({
           });
         }
 
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model,
-            stream: true,
-            messages: [{ role: "system", content: system }, ...messages],
-          }),
+        const upstream = await chatCompletionRequest({
+          stream: true,
+          messages: [{ role: "system", content: system }, ...messages],
         });
 
         if (!upstream.ok) {

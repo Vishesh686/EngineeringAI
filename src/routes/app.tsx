@@ -33,8 +33,8 @@ export const Route = createFileRoute("/app")({
 
 function AppLayout() {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+    <SidebarProvider defaultOpen>
+      <div className="flex min-h-svh w-full">
         <AppSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="premium-surface sticky top-0 z-30 flex h-12 items-center border-b border-border/40 px-3">

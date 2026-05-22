@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { notifyChatsChanged } from "@/lib/chat-events";
 import { motion } from "framer-motion";
 import { Send, Sparkles, MessageSquarePlus, Paperclip, Mic, Search, BookOpenCheck } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -13,7 +14,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getBranchSubjects } from "@/lib/engineering";
 
+const CREDITS_PER_MESSAGE = 10;
+
+type ChatSearch = { chatId?: string };
+
 export const Route = createFileRoute("/app/chat")({
+  validateSearch: (search: Record<string, unknown>): ChatSearch => ({
+    chatId: typeof search.chatId === "string" ? search.chatId : undefined,
+  }),
   component: ChatPage,
   head: () => ({ meta: [{ title: "Chat - Engineering AI" }] }),
 });
@@ -41,6 +49,8 @@ const SUGGESTIONS = [
 type Msg = { role: "user" | "assistant"; content: string };
 
 function ChatPage() {
+  const navigate = useNavigate();
+  const { chatId: routeChatId } = Route.useSearch();
   const [mode, setMode] = useState("general");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -61,6 +71,17 @@ function ChatPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const refreshBalance = async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    const balanceResp = await fetch("/api/credits/balance", {
+      headers: { Authorization: `Bearer ${sess.session?.access_token ?? ""}` },
+    });
+    if (balanceResp.ok) {
+      const json = await balanceResp.json();
+      setBalance(json.balance ?? 0);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -71,16 +92,46 @@ function ChatPage() {
       ]);
       if (profile?.engineering_domain) setBranch(profile.engineering_domain);
       if (memory?.value) setSubject(memory.value);
-      const { data: sess } = await supabase.auth.getSession();
-      const balanceResp = await fetch("/api/credits/balance", {
-        headers: { Authorization: `Bearer ${sess.session?.access_token ?? ""}` },
-      });
-      if (balanceResp.ok) {
-        const json = await balanceResp.json();
-        setBalance(json.balance ?? 0);
-      }
+      await refreshBalance();
     })();
   }, []);
+
+  useEffect(() => {
+    if (!routeChatId) {
+      setChatId(null);
+      setMessages([]);
+      return;
+    }
+    (async () => {
+      const { data: chat, error: chatErr } = await supabase
+        .from("chats")
+        .select("id, title, mode")
+        .eq("id", routeChatId)
+        .maybeSingle();
+      if (chatErr || !chat) {
+        toast.error("Chat not found");
+        navigate({ to: "/app/chat", search: {} });
+        return;
+      }
+      setChatId(chat.id);
+      setMode(chat.mode ?? "general");
+      const { data: rows, error: msgErr } = await supabase
+        .from("messages")
+        .select("role, content")
+        .eq("chat_id", chat.id)
+        .order("created_at", { ascending: true });
+      if (msgErr) {
+        toast.error(msgErr.message);
+        return;
+      }
+      setMessages(
+        (rows ?? []).map((r) => ({
+          role: r.role as "user" | "assistant",
+          content: r.content,
+        })),
+      );
+    })();
+  }, [routeChatId, navigate]);
 
   const ensureChat = async (firstMessage: string): Promise<string | null> => {
     if (chatId) return chatId;
@@ -97,6 +148,8 @@ function ChatPage() {
       return null;
     }
     setChatId(data.id);
+    navigate({ to: "/app/chat", search: { chatId: data.id }, replace: true });
+    notifyChatsChanged();
     return data.id;
   };
 
@@ -184,7 +237,8 @@ function ChatPage() {
       }
 
       if (cid && acc) await saveMessage(cid, "assistant", acc);
-      setBalance((b) => Math.max(0, b - 1));
+      await refreshBalance();
+      notifyChatsChanged();
     } catch (e: any) {
       toast.error(e.message ?? "Error");
     } finally {
@@ -238,6 +292,7 @@ function ChatPage() {
     setMessages([]);
     setChatId(null);
     setInput("");
+    navigate({ to: "/app/chat", search: {} });
   };
 
   return (
@@ -259,7 +314,7 @@ function ChatPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            Credits: {balance}
+            Credits: {balance} ({CREDITS_PER_MESSAGE}/message)
           </span>
           <Button
             variant="secondary"
