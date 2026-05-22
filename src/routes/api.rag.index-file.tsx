@@ -5,6 +5,8 @@ import { getSupabaseAdmin, getUserFromBearer } from "@/lib/server/supabase-admin
 
 async function extractText(name: string, mimeType: string | null, bytes: Uint8Array): Promise<string> {
   if ((mimeType || "").includes("pdf") || name.toLowerCase().endsWith(".pdf")) {
+    // Dynamically import pdf-parse only when needed on the server
+    const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({ data: Buffer.from(bytes) });
     const textResult = await parser.getText();
     await parser.destroy();
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/api/rag/index-file")({
         if (download.error || !download.data) return new Response(download.error?.message ?? "Download failed", { status: 500 });
 
         const bytes = new Uint8Array(await download.data.arrayBuffer());
-        const rawText = await extractText(file.name, file.mime_type, bytes);
+        const rawText = await extractTextFromFile(file.name, file.mime_type, bytes);
         const chunks = chunkText(rawText);
         if (chunks.length === 0) return new Response("No extractable text", { status: 400 });
 

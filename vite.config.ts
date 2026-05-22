@@ -15,4 +15,10 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  ssr: {
+    // Mark pdf-parse and pdfjs-dist as external to prevent bundling browser-only APIs during SSR
+    // These are only needed for server-side PDF processing at runtime, not during build
+    external: ["pdf-parse", "pdfjs-dist"],
+    noExternal: [],
+  },
 });
