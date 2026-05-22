@@ -34,6 +34,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { CHATS_CHANGED_EVENT, notifyChatsChanged } from "@/lib/chat-events";
+import { currentUserIsAdmin } from "@/lib/admin";
 import { toast } from "sonner";
 import { AdSlot } from "@/components/AdSlot";
 
@@ -77,13 +78,7 @@ export function AppSidebar() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data));
+    currentUserIsAdmin().then(setIsAdmin);
   }, [user]);
 
   useEffect(() => {

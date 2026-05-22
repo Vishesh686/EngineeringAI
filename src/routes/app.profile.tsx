@@ -119,6 +119,10 @@ function ProfilePage() {
               <Label>Email</Label>
               <Input value={user?.email ?? ""} disabled />
             </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label>Account ID (for admin setup in Supabase)</Label>
+              <Input value={user?.id ?? ""} disabled className="font-mono text-xs" />
+            </div>
             <div className="space-y-1">
               <Label>Display name</Label>
               <Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />

@@ -89,16 +89,21 @@ There is no separate admin login. Any user with the `admin` role in `user_roles`
 
 `https://YOUR-SITE.netlify.app/app/admin`
 
-To make yourself admin (Supabase → **SQL Editor**):
+To make yourself admin:
+
+1. Sign in on the site → **Profile** → copy **Account ID** (must match the row you insert).
+2. Supabase → **SQL Editor** → run `supabase/migrations/20260522170000_fix_admin_role_check.sql` (fixes role visibility).
+3. Then run:
 
 ```sql
--- Replace with your user id from Authentication → Users
 INSERT INTO public.user_roles (user_id, role)
-VALUES ('00000000-0000-0000-0000-000000000000', 'admin')
+VALUES ('YOUR-ACCOUNT-ID-FROM-PROFILE', 'admin')
 ON CONFLICT (user_id, role) DO NOTHING;
 ```
 
-Sign in with that account first, then visit `/app/admin`.
+4. Sign out and sign in again, then open `/app/admin`.
+
+If admin still fails, confirm the UUID in `user_roles` exactly matches the signed-in user's Account ID on Profile.
 
 ## 6. Switching from the bundled Lovable Supabase
 

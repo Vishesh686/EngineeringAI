@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { currentUserIsAdmin } from "@/lib/admin";
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { toast } from "sonner";
 
@@ -16,16 +17,12 @@ type BranchSubject = { id: string; branch: string; subject: string };
 type KnowledgeRow = { id: string; branch_name: string; subject_name: string; content_type: string; title: string; content: string; source_url: string | null; created_at: string };
 
 export const Route = createFileRoute("/app/admin")({
+  ssr: false,
   beforeLoad: async () => {
     const { data: sess } = await supabase.auth.getSession();
     if (!sess.session) throw redirect({ to: "/login" });
-    const { data: role } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", sess.session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-    if (!role) throw redirect({ to: "/app/chat" });
+    const isAdmin = await currentUserIsAdmin();
+    if (!isAdmin) throw redirect({ to: "/app/chat" });
   },
   component: AdminPage,
   head: () => ({ meta: [{ title: "Admin - Engineering AI" }] }),
