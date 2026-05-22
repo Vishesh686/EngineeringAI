@@ -5,15 +5,29 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ location }) => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("engineering_domain")
-      .eq("id", data.session.user.id)
-      .maybeSingle();
-    if (!profile?.engineering_domain && location.pathname !== "/app/onboarding") {
-      throw redirect({ to: "/app/onboarding" });
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error || !data.session) {
+        throw redirect({ to: "/login" });
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("engineering_domain")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+
+      if (!profile?.engineering_domain && location.pathname !== "/app/onboarding") {
+        throw redirect({ to: "/app/onboarding" });
+      }
+
+      return { session: data.session };
+    } catch (error: any) {
+      if (error?.status === 'REDIRECT_EXCEPTION') {
+        throw error;
+      }
+      throw redirect({ to: "/login" });
     }
   },
   component: AppLayout,

@@ -21,15 +21,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      setLoading(false);
+    let mounted = true;
+    let initialLoadComplete = false;
+
+    const initAuth = async () => {
+      try {
+        // First, get the current session from storage
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(currentSession);
+          initialLoadComplete = true;
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('[Auth] Error getting session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Initialize auth on mount
+    initAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (mounted) {
+        setSession(s);
+        // Only set loading to false after initial load
+        if (initialLoadComplete) {
+          setLoading(false);
+        }
+      }
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   return (
@@ -40,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signOut: async () => {
           await supabase.auth.signOut();
+          setSession(null);
         },
       }}
     >
