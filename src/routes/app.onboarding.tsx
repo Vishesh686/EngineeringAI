@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, GraduationCap, Rocket, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -25,6 +25,7 @@ const gradients = [
 ];
 
 function OnboardingPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [branch, setBranch] = useState<string>("Computer Science and Engineering (General)");
@@ -32,6 +33,7 @@ function OnboardingPage() {
   const [saving, setSaving] = useState(false);
 
   const subjects = useMemo(() => getBranchSubjects(branch), [branch]);
+  const subjectOptions = useMemo(() => [...new Set(subjects)], [subjects]);
 
   const save = async () => {
     if (!user) return;
@@ -55,7 +57,7 @@ function OnboardingPage() {
     }
 
     toast.success("Onboarding completed");
-    window.location.href = "/app/chat";
+    navigate({ to: "/app/chat", replace: true });
   };
 
   return (
@@ -175,7 +177,7 @@ function OnboardingPage() {
                   <div className="mt-6 rounded-2xl border border-border/50 bg-card/70 p-4">
                     <p className="mb-3 text-sm text-muted-foreground">Optional: choose default subject</p>
                     <div className="flex flex-wrap gap-2">
-                      {["General", ...subjects].map((s) => (
+                      {subjectOptions.map((s) => (
                         <Badge
                           key={s}
                           className={`cursor-pointer rounded-full px-3 py-1 ${subject === s ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}

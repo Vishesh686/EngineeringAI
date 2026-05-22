@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveAuthenticatedPath } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,7 @@ import { Logo } from "@/components/Logo";
 import { MeshBackground } from "@/components/MeshBackground";
 
 export const Route = createFileRoute("/login")({
+  ssr: false,
   component: LoginPage,
   head: () => ({ meta: [{ title: "Sign in — Engineering AI" }] }),
 });
@@ -18,31 +20,52 @@ function LoginPage() {
 }
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+  const navigate = useNavigate();
+  const redirected = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const goAfterAuth = async () => {
+    if (redirected.current) return;
+    redirected.current = true;
+    const path = await resolveAuthenticatedPath();
+    navigate({ to: path, replace: true });
+  };
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.href = "/app";
-    });
-  }, []);
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (cancelled || !data.session) return;
+      await goAfterAuth();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: window.location.origin + "/app" },
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin + "/app/onboarding" },
         });
         if (error) throw error;
+        if (data.session) {
+          await goAfterAuth();
+          return;
+        }
         toast.success("Check your email to verify your account.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        window.location.href = "/app";
+        redirected.current = false;
+        await goAfterAuth();
       }
     } catch (err: any) {
       toast.error(err.message ?? "Something went wrong");
@@ -54,14 +77,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const google = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/app` },
+      options: { redirectTo: `${window.location.origin}/app/chat` },
     });
     if (error) toast.error(error.message ?? "Google sign-in failed");
   };
   const github = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: `${window.location.origin}/app` },
+      options: { redirectTo: `${window.location.origin}/app/chat` },
     });
     if (error) toast.error(error.message ?? "GitHub sign-in failed");
   };

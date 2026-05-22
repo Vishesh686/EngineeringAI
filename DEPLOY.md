@@ -83,6 +83,23 @@ Use Netlify CLI **17.31+** when using `@netlify/vite-plugin-tanstack-start`.
 | Logged in but `/app` kicks you out | Run migrations; check `profiles` table and RLS policies. |
 | Chat/API returns 401 | Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify (server env, not `VITE_`). |
 
-## 5. Switching from the bundled Lovable Supabase
+## 5. Admin dashboard access
+
+There is no separate admin login. Any user with the `admin` role in `user_roles` can open:
+
+`https://YOUR-SITE.netlify.app/app/admin`
+
+To make yourself admin (Supabase → **SQL Editor**):
+
+```sql
+-- Replace with your user id from Authentication → Users
+INSERT INTO public.user_roles (user_id, role)
+VALUES ('00000000-0000-0000-0000-000000000000', 'admin')
+ON CONFLICT (user_id, role) DO NOTHING;
+```
+
+Sign in with that account first, then visit `/app/admin`.
+
+## 6. Switching from the bundled Lovable Supabase
 
 Replace all values in `.env` with **your** project’s URL and keys, update Supabase redirect URLs to your Netlify domain, run migrations, then redeploy Netlify so the new `VITE_*` values are embedded in the client bundle.

@@ -54,7 +54,7 @@ function ChatPage() {
   const autoSentRef = useRef(false);
 
   const isEmpty = messages.length === 0;
-  const subjects = useMemo(() => ["General", ...getBranchSubjects(branch)], [branch]);
+  const subjects = useMemo(() => [...new Set(getBranchSubjects(branch))], [branch]);
   const subjectPicked = Boolean(subject && subject.trim());
 
   useEffect(() => {

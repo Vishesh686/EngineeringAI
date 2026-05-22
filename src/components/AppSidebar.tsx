@@ -50,6 +50,7 @@ export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -60,7 +61,17 @@ export function AppSidebar() {
       .eq("role", "admin")
       .maybeSingle()
       .then(({ data }) => setIsAdmin(!!data));
+    supabase
+      .from("profiles")
+      .select("engineering_domain")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setOnboardingDone(Boolean(data?.engineering_domain?.trim())));
   }, [user]);
+
+  const accountItems = onboardingDone
+    ? userItems.filter((item) => item.url !== "/app/onboarding")
+    : userItems;
 
   const isActive = (url: string) => path === url || path.startsWith(url + "/");
 
@@ -98,7 +109,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {userItems.map((item) => (
+              {accountItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link to={item.url} className="flex items-center gap-2">

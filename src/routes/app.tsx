@@ -2,17 +2,29 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { hasCompletedOnboarding } from "@/lib/auth-redirect";
 
 export const Route = createFileRoute("/app")({
+  // Auth uses localStorage; SSR cannot see the session and caused /app ↔ /login reload loops.
+  ssr: false,
   beforeLoad: async ({ location }) => {
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login" });
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("engineering_domain")
       .eq("id", data.session.user.id)
       .maybeSingle();
-    if (!profile?.engineering_domain && location.pathname !== "/app/onboarding") {
+
+    const completed = hasCompletedOnboarding(profile?.engineering_domain);
+    const path = location.pathname;
+
+    if (completed) {
+      if (path === "/app" || path === "/app/onboarding") {
+        throw redirect({ to: "/app/chat" });
+      }
+    } else if (path !== "/app/onboarding") {
       throw redirect({ to: "/app/onboarding" });
     }
   },

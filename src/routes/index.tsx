@@ -1,5 +1,8 @@
 import { ArrowRight } from "lucide-react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { resolveAuthenticatedPath } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -10,6 +13,7 @@ import { PricingSection } from "@/components/landing/PricingSection";
 import { PromptHero } from "@/components/landing/PromptHero";
 
 export const Route = createFileRoute("/")({
+  ssr: false,
   component: Index,
   head: () => ({
     meta: [
@@ -22,6 +26,14 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading || !user) return;
+    resolveAuthenticatedPath().then((path) => navigate({ to: path, replace: true }));
+  }, [user, loading, navigate]);
+
   return (
     <div className="relative min-h-screen bg-background">
       <SiteHeader />
