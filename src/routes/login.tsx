@@ -137,4 +137,3 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     </div>
   );
 }
-

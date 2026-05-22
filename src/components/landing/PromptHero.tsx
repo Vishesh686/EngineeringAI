@@ -31,7 +31,7 @@ export function PromptHero() {
   const google = async () => {
     setGoogleLoading(true);
     try {
-      const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/app" });
+      const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/app/chat" });
       if (res.error) toast.error("Google sign-in failed");
     } finally {
       setGoogleLoading(false);

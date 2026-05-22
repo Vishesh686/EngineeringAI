@@ -8,8 +8,8 @@ export const Route = createFileRoute("/app")({
   // Auth uses localStorage; SSR cannot see the session and caused /app ↔ /login reload loops.
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session) throw redirect({ to: "/login" });
 
     const { data: profile } = await supabase
       .from("profiles")
